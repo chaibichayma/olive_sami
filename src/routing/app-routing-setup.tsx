@@ -3,6 +3,7 @@ import { AuthRouting } from '@/auth/auth-routing';
 import { RequireAuth } from '@/auth/require-auth';
 import { ErrorRouting } from '@/errors/error-routing';
 import { Demo1Layout } from '@/layouts/demo1/layout';
+import UserProfilePage from '@/pages/account/UserProfilePage';
 
 import { BonReceptionPage } from '@/pages/bon-reception';
 import BonReceptionFormPage from '@/pages/bon-reception/BonReceptionFormPage';
@@ -19,6 +20,7 @@ import { DashboardPage } from '@/pages/store-admin';
 import DepartementsPage from '@/pages/store-admin/DepartementsPage';
 import FunctionsPage from '@/pages/store-admin/FunctionsPage';
 import RubriquesPage from '@/pages/store-admin/RubriquesPage';
+import WorkerAttendancesPage from '@/pages/store-admin/worker-attendances/WorkerAttendancesPage';
 import TraitementBasesPage from '@/pages/traitement-bases/traitement-bases-page';
 import { UtilisateurPage, AjouterUtilisateurPage } from '@/pages/utilisateurs';
 import { VenteHuilePage } from '@/pages/vente-huile/vente-huile-page';
@@ -143,6 +145,14 @@ export function AppRoutingSetup() {
 <Route
   path="/store-admin/oil-purchases"
   element={<OilPurchasesPage />}
+/>
+<Route
+  path="/account/home/user-profile"
+  element={<UserProfilePage />}
+/>
+<Route
+  path="/store-admin/worker-attendances"
+  element={<WorkerAttendancesPage />}
 />
 
           {/* Vente d'huile */}

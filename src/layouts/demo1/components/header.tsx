@@ -1,9 +1,9 @@
 
+
 import { useEffect, useState } from 'react';
-import { Bell, ChevronDown, Menu, Search } from 'lucide-react';
+import { Bell, ChevronDown, Menu } from 'lucide-react';
 import { useLocation } from 'react-router';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { SearchDialog } from '@/partials/dialogs/search/search-dialog';
 import { NotificationsSheet } from '@/partials/topbar/notifications-sheet';
 import { UserDropdownMenu } from '@/partials/topbar/user-dropdown-menu';
 import { Button } from '@/components/ui/button';
@@ -40,7 +40,7 @@ export function Header() {
       )}
     >
       <Container className="flex h-full items-center justify-between">
-        {/* Mobile menu */}
+        {/* Menu mobile */}
         <div className="flex items-center lg:hidden">
           {mobileMode && (
             <Sheet
@@ -70,25 +70,10 @@ export function Header() {
           )}
         </div>
 
-        {/* Search */}
-        <div className="flex items-center">
-          <SearchDialog
-            trigger={
-              <button
-                type="button"
-                className="flex h-10 w-[340px] items-center gap-3 rounded-lg bg-[#F5F5F3] px-3 text-left transition-colors hover:bg-[#EEEEEB]"
-              >
-                <Search className="size-4 text-[#30352D]" />
+        {/* Espace gauche sans barre de recherche */}
+        <div className="flex-1" />
 
-                <span className="text-sm text-muted-foreground">
-                  Rechercher...
-                </span>
-              </button>
-            }
-          />
-        </div>
-
-        {/* Right side */}
+        {/* Notifications et profil utilisateur */}
         <div className="flex items-center gap-5">
           {/* Notifications */}
           <NotificationsSheet
@@ -104,7 +89,7 @@ export function Header() {
             }
           />
 
-          {/* User */}
+          {/* Profil utilisateur */}
           <UserDropdownMenu
             trigger={
               <button
@@ -112,11 +97,11 @@ export function Header() {
                 className="flex items-center gap-3 rounded-lg px-2 py-1.5 transition-colors hover:bg-muted"
               >
                 {/* Avatar */}
-                <div className="flex size-10 items-center justify-center rounded-full bg-[#526B2F] text-sm font-semibold text-white">
+                <div className="flex size-10 items-center justify-center rounded-full bg-[#556B2F] text-sm font-semibold text-white">
                   A
                 </div>
 
-                {/* Name */}
+                {/* Nom et rôle */}
                 <div className="hidden text-left sm:block">
                   <p className="text-sm font-semibold leading-5 text-[#1F241D]">
                     Ayah
@@ -127,7 +112,7 @@ export function Header() {
                   </p>
                 </div>
 
-                {/* Arrow */}
+                {/* Flèche */}
                 <ChevronDown className="hidden size-4 text-[#1F241D] sm:block" />
               </button>
             }

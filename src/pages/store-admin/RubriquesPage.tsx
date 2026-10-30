@@ -201,7 +201,7 @@ export default function RubriquesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f5f7f2] p-4 text-[#243047] sm:p-6">
+    <div className="min-h-screen  p-4 text-[#243047] sm:p-6">
       <div className="mx-auto max-w-[1600px] space-y-5">
 
         {/* En-tête */}

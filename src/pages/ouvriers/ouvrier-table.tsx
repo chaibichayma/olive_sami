@@ -305,37 +305,40 @@ export function OuvrierTable({
 
                     {/* EN-TÊTE */}
 
-                    <div className="flex items-start justify-between gap-2 border-b border-[#edf0f2] px-3 py-3">
-                      <div className="flex min-w-0 items-center gap-3">
-                        <div className="size-11 shrink-0 overflow-hidden rounded-full border border-[#e5e7eb] bg-[#f1f5f9]">
-                          {imageUrl ? (
-                            <img
-                              src={imageUrl}
-                              alt={ouvrier.nom}
-                              loading="lazy"
-                              className="size-full object-cover"
-                            />
-                          ) : (
-                            <div className="flex size-full items-center justify-center">
-                              <UserRound className="size-5 text-[#64748b]" />
-                            </div>
-                          )}
-                        </div>
+                    
+{/* EN-TÊTE : PHOTO ET INFORMATIONS DE L'OUVRIER */}
 
-                        <div className="min-w-0">
-                          <h3 className="truncate text-sm font-bold text-[#172033]">
-                            {ouvrier.nom}
-                          </h3>
-                          <p className="mt-1 text-[11px] text-[#94a3b8]">
-                            Ouvrier #{String(ouvrier.id).padStart(3, '0')}
-                          </p>
-                        </div>
-                      </div>
+<div className="flex items-center justify-between gap-3 border-b border-[#edf0f2] px-3 py-3">
+  <div className="flex min-w-0 items-center gap-3">
+    <div className="size-12 shrink-0 overflow-hidden rounded-full border-2 border-[#DCE8CF] bg-[#F1F5E9] shadow-sm">
+      <img
+        src={workerImages[ouvrier.id] || `https://i.pravatar.cc/100?u=${ouvrier.id}`}
+        alt={`Photo de ${ouvrier.nom}`}
+        loading="lazy"
+        onError={(e) => {
+          e.currentTarget.onerror = null;
+          e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(ouvrier.nom)}&background=E8EEDC&color=556B2F&size=100`;
+        }}
+        className="size-full object-cover"
+      />
+    </div>
 
-                      <span className="shrink-0 rounded-md bg-[#f1f5f9] px-2 py-1 text-[10px] font-semibold text-[#64748b]">
-                        CIN {ouvrier.cin || '—'}
-                      </span>
-                    </div>
+    <div className="min-w-0">
+      <h3 className="truncate text-sm font-bold text-[#172033]">
+        {ouvrier.nom}
+      </h3>
+
+      <p className="mt-1 text-[11px] text-[#94a3b8]">
+        Ouvrier #{String(ouvrier.id).padStart(3, '0')}
+      </p>
+    </div>
+  </div>
+
+  <span className="shrink-0 rounded-md bg-[#F1F5F9] px-2 py-1 text-[10px] font-semibold text-[#64748B]">
+    CIN {ouvrier.cin || '—'}
+  </span>
+</div>
+
 
                     {/* INFORMATIONS */}
 

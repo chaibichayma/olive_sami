@@ -68,12 +68,7 @@ export const MENU_SIDEBAR: MenuConfig = [
         title: 'Utilisateurs',
         icon: Users,
         path: '/store-admin/users',
-      },
-      {
-        title: 'Profils',
-        icon: UserRound,
-        path: '/store-admin/profiles',
-      },
+      }
     ],
   },
 
@@ -135,15 +130,10 @@ export const MENU_SIDEBAR: MenuConfig = [
         path: '/store-admin/worker-plannings',
       },
       {
-        title: 'Gestion des présences',
-        icon: UserCheck,
-        path: '/store-admin/worker-attendances',
-      },
-      {
-        title: 'Gestion des absences',
-        icon: UserX,
-        path: '/store-admin/worker-absences',
-      },
+  title: 'Gestion des présences',
+  icon: UserCheck,
+  path: '/store-admin/worker-attendances',
+},
       {
         title: 'Paiement des ouvriers',
         icon: Wallet,
