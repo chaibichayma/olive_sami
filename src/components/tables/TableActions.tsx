@@ -1,10 +1,11 @@
 
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2 } from 'lucide-react';
 
 interface TableActionsProps<T> {
   item: T;
   onEdit?: (item: T) => void;
   onDelete?: (item: T) => void;
+
   editLabel?: string;
   deleteLabel?: string;
 }
@@ -13,11 +14,12 @@ export function TableActions<T>({
   item,
   onEdit,
   onDelete,
-  editLabel = "Modifier",
-  deleteLabel = "Supprimer",
+  editLabel = 'Modifier',
+  deleteLabel = 'Supprimer',
 }: TableActionsProps<T>) {
   return (
     <div className="flex h-full items-center justify-center gap-2">
+
       {onEdit && (
         <button
           type="button"
@@ -41,6 +43,9 @@ export function TableActions<T>({
           <Trash2 className="size-4" />
         </button>
       )}
+
     </div>
   );
 }
+
+export default TableActions;

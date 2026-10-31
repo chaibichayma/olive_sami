@@ -1,25 +1,27 @@
 
-import { useCallback, useEffect, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useCallback, useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 
 import {
   Plus,
-  Trash2,
-  X,
-  Users,
   RefreshCcw,
-  AlertCircle,
-} from 'lucide-react';
+  Users,
+} from "lucide-react";
 
-import { Button } from '@/components/ui/button';
-import { Container } from '@/components/common/container';
+import { Button } from "@/components/ui/button";
+import { Container } from "@/components/common/container";
 
-import {
-  UtilisateurTable,
-  type Utilisateur,
-} from './utilisateur-table';
+import { PageHeader } from "@/components/common/PageHeader";
+import { InfoBanner } from "@/components/common/InfoBanner";
+import { LoadingState } from "@/components/common/LoadingState";
+import { ErrorState } from "@/components/common/ErrorState";
+import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 
-import { utilisateurApi } from '@/services/api';
+
+
+import { utilisateurApi } from "@/services/api";
+import { Utilisateur } from "@/components/utilisateurs/utilisateur.types";
+import { UtilisateurTable } from "./utilisateur-table";
 
 // ======================================================
 // PAGE UTILISATEURS
@@ -29,17 +31,23 @@ export function UtilisateurPage() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // ======================================================
+  // ÉTATS
+  // ======================================================
+
   const [utilisateurs, setUtilisateurs] = useState<Utilisateur[]>([]);
+
   const [utilisateurToDelete, setUtilisateurToDelete] =
     useState<Utilisateur | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   // ======================================================
-  // CHARGEMENT DES UTILISATEURS DEPUIS L'API
+  // CHARGEMENT DES UTILISATEURS
   // ======================================================
 
   const chargerUtilisateurs = useCallback(async () => {
@@ -47,12 +55,12 @@ export function UtilisateurPage() {
     setError(null);
 
     try {
-      const response = await utilisateurApi.getList('');
+      const response = await utilisateurApi.getList("");
 
       let data: unknown = response;
 
-      // Normaliser les différents formats possibles de réponse.
-      if (!Array.isArray(data) && data && typeof data === 'object') {
+      // Normalisation des formats possibles de réponse API.
+      if (!Array.isArray(data) && data && typeof data === "object") {
         const objet = data as Record<string, unknown>;
 
         data =
@@ -68,7 +76,7 @@ export function UtilisateurPage() {
 
       if (!Array.isArray(data)) {
         throw new Error(
-          "Le format de la réponse API n'est pas un tableau d'utilisateurs.",
+          "Le format de la réponse API n'est pas un tableau d'utilisateurs."
         );
       }
 
@@ -76,67 +84,77 @@ export function UtilisateurPage() {
         (element: unknown, index: number) => {
           const item = element as Record<string, unknown>;
 
+          const activeValue =
+            item.isActive ??
+            item.active ??
+            item.actif;
+
           return {
             id: Number(item.id ?? item.userId ?? index + 1),
+
             displayName: String(
               item.displayName ??
-                item.name ??
-                item.nom ??
-                item.fullName ??
-                '',
+              item.name ??
+              item.nom ??
+              item.fullName ??
+              ""
             ),
+
             userName: String(
               item.userName ??
-                item.username ??
-                item.login ??
-                item.nomUtilisateur ??
-                '',
+              item.username ??
+              item.login ??
+              item.nomUtilisateur ??
+              ""
             ),
+
             mail: String(
               item.mail ??
-                item.email ??
-                item.emailAddress ??
-                '',
+              item.email ??
+              item.emailAddress ??
+              ""
             ),
 
             // Ne jamais afficher le mot de passe reçu de l'API.
-            password: '',
+            password: "",
 
             userCode: String(
               item.userCode ??
-                item.code ??
-                item.codeUtilisateur ??
-                '',
+              item.code ??
+              item.codeUtilisateur ??
+              ""
             ),
 
             isActive:
-              item.isActive === true ||
-              item.isActive === 1 ||
-              item.isActive === 'true' ||
-              item.active === true ||
-              item.actif === true,
+              activeValue === true ||
+              activeValue === 1 ||
+              activeValue === "1" ||
+              activeValue === "true",
           };
-        },
+        }
       );
 
       setUtilisateurs(liste);
     } catch (err: unknown) {
       console.error(
-        'Erreur de chargement des utilisateurs :',
-        err,
+        "Erreur de chargement des utilisateurs :",
+        err
       );
 
       setError(
         err instanceof Error
           ? err.message
-          : 'Impossible de récupérer les utilisateurs.',
+          : "Impossible de récupérer les utilisateurs."
       );
     } finally {
       setLoading(false);
     }
   }, []);
 
-  // Chargement initial et actualisation après navigation.
+  // ======================================================
+  // CHARGEMENT INITIAL
+  // ======================================================
+
   useEffect(() => {
     void chargerUtilisateurs();
   }, [chargerUtilisateurs, location.key]);
@@ -146,11 +164,11 @@ export function UtilisateurPage() {
   // ======================================================
 
   const handleAdd = () => {
-    navigate('/store-admin/users/ajouter');
+    navigate("/store-admin/users/ajouter");
   };
 
   const handleEdit = (utilisateur: Utilisateur) => {
-    navigate('/store-admin/users/ajouter', {
+    navigate("/store-admin/users/ajouter", {
       state: { utilisateur },
     });
   };
@@ -179,28 +197,29 @@ export function UtilisateurPage() {
 
     try {
       const response = await utilisateurApi.delete(
-        utilisateurToDelete.id,
+        utilisateurToDelete.id
       );
 
       if (response?.isValid === false) {
         throw new Error(
-          response.message || 'La suppression a échoué.',
+          response.message || "La suppression a échoué."
         );
       }
 
-      // Recharger les données du backend après suppression.
       setUtilisateurToDelete(null);
+
+      // Actualiser la liste après suppression.
       await chargerUtilisateurs();
     } catch (err: unknown) {
       console.error(
-        'Erreur lors de la suppression :',
-        err,
+        "Erreur lors de la suppression :",
+        err
       );
 
       setDeleteError(
         err instanceof Error
           ? err.message
-          : "Impossible de supprimer cet utilisateur.",
+          : "Impossible de supprimer cet utilisateur."
       );
     } finally {
       setDeleting(false);
@@ -213,101 +232,63 @@ export function UtilisateurPage() {
 
   return (
     <>
+      {/* EN-TÊTE */}
       <Container>
         <div className="py-5 sm:py-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-                Utilisateurs
-              </h1>
-
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500 sm:text-base">
-                Gérez les utilisateurs du système, leurs rôles et leurs
-                permissions.
-              </p>
-            </div>
-
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => void chargerUtilisateurs()}
-                disabled={loading}
-                className="h-11 gap-2 rounded-lg border-slate-200"
-              >
-                <RefreshCcw
-                  className={`size-4 ${loading ? 'animate-spin' : ''}`}
-                />
-                Actualiser
-              </Button>
-
-              <Button
-                type="button"
-                onClick={handleAdd}
-                className="h-11 w-full shrink-0 gap-2 rounded-lg bg-[#556B2F] px-5 font-medium text-white shadow-sm transition-colors hover:bg-[#465A27] sm:w-auto"
-              >
-                <Plus className="size-4" />
-                Ajouter un utilisateur
-              </Button>
-            </div>
-          </div>
-
-          <section className="mt-6 flex items-center gap-4 rounded-lg border border-slate-200 bg-white px-5 py-4 sm:px-6">
-            <div className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-[#F0F4E9]">
-              <Users className="size-6 text-[#556B2F]" />
-            </div>
-
-            <div className="h-11 w-px shrink-0 bg-[#C9D6B5]" />
-
-            <div className="min-w-0">
-              <h2 className="text-base font-bold tracking-tight text-[#172033] sm:text-lg">
-                Gérez facilement vos utilisateurs
-              </h2>
-
-              <p className="mt-1 text-xs leading-5 text-slate-500 sm:text-sm">
-                Ajoutez, modifiez ou désactivez des utilisateurs et
-                définissez leurs rôles.
-              </p>
-            </div>
-          </section>
-        </div>
-      </Container>
-
-      <Container>
-        {loading ? (
-          <div className="flex min-h-[220px] flex-col items-center justify-center gap-3 rounded-xl border border-slate-200 bg-white">
-            <RefreshCcw className="size-7 animate-spin text-[#556B2F]" />
-            <p className="text-sm text-slate-500">
-              Chargement des utilisateurs...
-            </p>
-          </div>
-        ) : error ? (
-          <div
-            role="alert"
-            className="rounded-xl border border-red-200 bg-red-50 p-5"
-          >
-            <div className="flex items-start gap-3">
-              <AlertCircle className="mt-0.5 size-5 shrink-0 text-red-600" />
-
-              <div className="min-w-0 flex-1">
-                <h2 className="font-semibold text-red-800">
-                  Erreur de chargement
-                </h2>
-
-                <p className="mt-1 break-words text-sm text-red-700">
-                  {error}
-                </p>
+          <PageHeader
+            title="Utilisateurs"
+            description="Gérez les utilisateurs du système, leurs rôles et leurs permissions."
+            actions={
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => void chargerUtilisateurs()}
+                  disabled={loading}
+                  className="h-11 gap-2 rounded-lg border-slate-200"
+                >
+                  <RefreshCcw
+                    className={`size-4 ${
+                      loading ? "animate-spin" : ""
+                    }`}
+                  />
+                  Actualiser
+                </Button>
 
                 <Button
                   type="button"
-                  onClick={() => void chargerUtilisateurs()}
-                  className="mt-4 h-9 rounded-lg bg-[#556B2F] text-white hover:bg-[#465A27]"
+                  onClick={handleAdd}
+                  className="h-11 w-full shrink-0 gap-2 rounded-lg bg-[#556B2F] px-5 font-medium text-white shadow-sm transition-colors hover:bg-[#465A27] sm:w-auto"
                 >
-                  Réessayer
+                  <Plus className="size-4" />
+                  Ajouter un utilisateur
                 </Button>
-              </div>
-            </div>
+              </>
+            }
+          />
+
+          {/* BLOC D'INFORMATION */}
+          <div className="mt-6">
+            <InfoBanner
+              icon={<Users className="size-6" />}
+              title="Gérez facilement vos utilisateurs"
+              description="Ajoutez, modifiez ou désactivez des utilisateurs et définissez leurs rôles."
+            />
           </div>
+        </div>
+      </Container>
+
+      {/* CONTENU PRINCIPAL */}
+      <Container>
+        {loading ? (
+          <LoadingState message="Chargement des utilisateurs..." />
+        ) : error ? (
+          <ErrorState
+            title="Erreur de chargement"
+            message={error}
+            onRetry={() => void chargerUtilisateurs()}
+            retryLabel="Réessayer"
+          />
         ) : (
           <UtilisateurTable
             utilisateurs={utilisateurs}
@@ -317,94 +298,18 @@ export function UtilisateurPage() {
         )}
       </Container>
 
-      {/* MODALE DE CONFIRMATION DE SUPPRESSION */}
-      {utilisateurToDelete && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 py-6 backdrop-blur-[2px]"
-          onClick={handleCancelDelete}
-        >
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="delete-user-title"
-            className="relative w-full max-w-[440px] rounded-2xl border border-slate-100 bg-white p-6 shadow-2xl sm:p-8"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <button
-              type="button"
-              onClick={handleCancelDelete}
-              disabled={deleting}
-              className="absolute right-4 top-4 flex size-9 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50"
-              aria-label="Fermer"
-            >
-              <X className="size-5" />
-            </button>
-
-            <div className="flex justify-center">
-              <div className="flex size-16 items-center justify-center rounded-2xl bg-red-50">
-                <Trash2 className="size-7 text-red-500" />
-              </div>
-            </div>
-
-            <div className="mt-5 text-center">
-              <h2
-                id="delete-user-title"
-                className="text-xl font-bold tracking-tight text-slate-900"
-              >
-                Supprimer l'utilisateur ?
-              </h2>
-
-              <p className="mt-3 text-sm leading-6 text-slate-500">
-                Cette action supprimera définitivement cet utilisateur
-                du système.
-              </p>
-
-              <p className="mt-2 font-semibold text-slate-800">
-                {utilisateurToDelete.displayName}
-              </p>
-
-              {deleteError && (
-                <div
-                  role="alert"
-                  className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-left text-sm text-red-700"
-                >
-                  <div className="flex items-start gap-2">
-                    <AlertCircle className="mt-0.5 size-4 shrink-0" />
-                    <p>{deleteError}</p>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="mt-7 flex flex-col-reverse justify-center gap-3 sm:flex-row">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleCancelDelete}
-                disabled={deleting}
-                className="h-11 min-w-[120px] rounded-lg border-slate-200"
-              >
-                Annuler
-              </Button>
-
-              <Button
-                type="button"
-                onClick={() => void handleConfirmDelete()}
-                disabled={deleting}
-                className="h-11 min-w-[145px] rounded-lg bg-red-500 text-white hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {deleting ? (
-                  <RefreshCcw className="mr-2 size-4 animate-spin" />
-                ) : (
-                  <Trash2 className="mr-2 size-4" />
-                )}
-
-                {deleting ? 'Suppression...' : 'Supprimer'}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* CONFIRMATION DE SUPPRESSION */}
+      <ConfirmDialog
+        open={utilisateurToDelete !== null}
+        title="Supprimer l'utilisateur ?"
+        description="Cette action supprimera définitivement cet utilisateur du système."
+        itemName={utilisateurToDelete?.displayName}
+        confirmLabel="Supprimer"
+        loading={deleting}
+        error={deleteError}
+        onConfirm={() => void handleConfirmDelete()}
+        onCancel={handleCancelDelete}
+      />
     </>
   );
 }

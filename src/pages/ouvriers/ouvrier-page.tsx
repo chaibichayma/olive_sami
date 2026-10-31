@@ -1,6 +1,6 @@
-
 import { useCallback, useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+
 import {
   Plus,
   Trash2,
@@ -11,9 +11,11 @@ import {
 
 import { Button } from '@/components/ui/button';
 import { Container } from '@/components/common/container';
+
 import { getOuvriers } from '@/services/api';
 
-import { Ouvrier, OuvrierTable } from './ouvrier-table';
+import { OuvrierTable } from './ouvrier-table';
+import type { Ouvrier } from '@/components/ouvriers/ouvrier.types';
 
 /* ============================================================
    PAGE GESTION DES OUVRIERS
@@ -23,15 +25,20 @@ export function OuvrierPage() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  /* ==========================================================
+     ÉTATS
+  ========================================================== */
+
   const [ouvriers, setOuvriers] = useState<Ouvrier[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
   const [ouvrierToDelete, setOuvrierToDelete] =
     useState<Ouvrier | null>(null);
 
-  /* ============================================================
-     CHARGER LES OUVRIERS DEPUIS LE BACKEND
-  ============================================================ */
+  /* ==========================================================
+     CHARGEMENT DES OUVRIERS
+  ========================================================== */
 
   const chargerOuvriers = useCallback(async () => {
     setLoading(true);
@@ -52,12 +59,18 @@ export function OuvrierPage() {
     }
   }, []);
 
-  /* Chargement initial */
+  /* ==========================================================
+     CHARGEMENT INITIAL
+  ========================================================== */
+
   useEffect(() => {
     void chargerOuvriers();
   }, [chargerOuvriers]);
 
-  /* Actualiser après ajout ou modification */
+  /* ==========================================================
+     ACTUALISATION APRÈS AJOUT OU MODIFICATION
+  ========================================================== */
+
   useEffect(() => {
     if (location.state?.refreshOuvriers) {
       void chargerOuvriers();
@@ -75,17 +88,17 @@ export function OuvrierPage() {
     chargerOuvriers,
   ]);
 
-  /* ============================================================
+  /* ==========================================================
      AJOUTER UN OUVRIER
-  ============================================================ */
+  ========================================================== */
 
   const handleAdd = () => {
     navigate('/store-admin/workers/form');
   };
 
-  /* ============================================================
+  /* ==========================================================
      MODIFIER UN OUVRIER
-  ============================================================ */
+  ========================================================== */
 
   const handleEdit = (ouvrier: Ouvrier) => {
     navigate('/store-admin/workers/form', {
@@ -93,28 +106,28 @@ export function OuvrierPage() {
     });
   };
 
-  /* ============================================================
+  /* ==========================================================
      OUVRIR LA MODALE DE SUPPRESSION
-  ============================================================ */
+  ========================================================== */
 
   const handleDelete = (ouvrier: Ouvrier) => {
     setError('');
     setOuvrierToDelete(ouvrier);
   };
 
-  /* ============================================================
+  /* ==========================================================
      ANNULER LA SUPPRESSION
-  ============================================================ */
+  ========================================================== */
 
   const handleCancelDelete = () => {
     setOuvrierToDelete(null);
   };
 
-  /* ============================================================
+  /* ==========================================================
      CONFIRMER LA SUPPRESSION
-     
-     À connecter lorsque l'endpoint DELETE sera confirmé.
-  ============================================================ */
+
+     À connecter à l'endpoint DELETE du backend.
+  ========================================================== */
 
   const handleConfirmDelete = () => {
     setError(
@@ -124,16 +137,18 @@ export function OuvrierPage() {
     setOuvrierToDelete(null);
   };
 
-  /* ============================================================
+  /* ==========================================================
      AFFICHAGE
-  ============================================================ */
+  ========================================================== */
 
   return (
     <>
       {/* EN-TÊTE */}
+
       <Container>
         <header className="w-full py-5 sm:py-6">
           <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-center">
+
             <div className="flex min-w-0 items-center gap-4">
               <div className="flex size-12 shrink-0 items-center justify-center rounded-xl border border-[#e1e9d7] bg-[#f0f5e8]">
                 <UsersRound className="size-6 text-[#556B2F]" />
@@ -164,8 +179,12 @@ export function OuvrierPage() {
         </header>
       </Container>
 
-      {/* TABLEAU DES OUVRIERS */}
+      {/* CONTENU */}
+
       <Container>
+
+        {/* MESSAGE D'ERREUR */}
+
         {error && (
           <div
             role="alert"
@@ -185,12 +204,16 @@ export function OuvrierPage() {
           </div>
         )}
 
+        {/* CHARGEMENT */}
+
         {loading ? (
           <div className="flex items-center justify-center gap-3 py-12 text-sm text-slate-500">
             <RefreshCw className="size-5 animate-spin text-[#556B2F]" />
             Chargement des ouvriers...
           </div>
         ) : (
+          /* TABLEAU */
+
           <OuvrierTable
             ouvriers={ouvriers}
             onEdit={handleEdit}
@@ -200,6 +223,7 @@ export function OuvrierPage() {
       </Container>
 
       {/* MODALE DE CONFIRMATION */}
+
       {ouvrierToDelete && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 py-6 backdrop-blur-[2px]"
@@ -212,6 +236,8 @@ export function OuvrierPage() {
             className="relative w-full max-w-[440px] rounded-2xl border border-slate-100 bg-white p-6 shadow-2xl sm:p-8"
             onClick={(event) => event.stopPropagation()}
           >
+            {/* FERMER */}
+
             <button
               type="button"
               onClick={handleCancelDelete}
@@ -221,11 +247,15 @@ export function OuvrierPage() {
               <X className="size-5" />
             </button>
 
+            {/* ICÔNE */}
+
             <div className="flex justify-center">
               <div className="flex size-16 items-center justify-center rounded-2xl bg-red-50">
                 <Trash2 className="size-7 text-red-500" />
               </div>
             </div>
+
+            {/* MESSAGE */}
 
             <div className="mt-5 text-center">
               <h2
@@ -243,6 +273,8 @@ export function OuvrierPage() {
                 {ouvrierToDelete.nom}
               </p>
             </div>
+
+            {/* ACTIONS */}
 
             <div className="mt-7 flex flex-col-reverse justify-center gap-3 sm:flex-row">
               <Button

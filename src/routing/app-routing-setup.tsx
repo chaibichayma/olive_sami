@@ -10,6 +10,7 @@ import BonReceptionFormPage from '@/pages/bon-reception/BonReceptionFormPage';
 
 import { AjouterCiternePage, CiternePage } from '@/pages/citernes';
 import { ComptePage, AjouterComptePage } from '@/pages/comptes';
+import FunctionsPage from '@/pages/fonctions/FunctionsPage';
 import OilPurchasesPage from '@/pages/OilPurchasesPage';
 import OilSalesPage from '@/pages/OilSalesPage';
 import { AjouterOuvrierPage } from '@/pages/ouvriers';
@@ -18,7 +19,6 @@ import { WorkerPlanningsPage } from '@/pages/plannings-ouvriers';
 import { AjouterSaisonPage, SaisonPage } from '@/pages/saison';
 import { DashboardPage } from '@/pages/store-admin';
 import DepartementsPage from '@/pages/store-admin/DepartementsPage';
-import FunctionsPage from '@/pages/store-admin/FunctionsPage';
 import RubriquesPage from '@/pages/store-admin/RubriquesPage';
 import WorkerAttendancesPage from '@/pages/store-admin/worker-attendances/WorkerAttendancesPage';
 import TraitementBasesPage from '@/pages/traitement-bases/traitement-bases-page';
@@ -95,10 +95,6 @@ export function AppRoutingSetup() {
             element={<OuvrierPage />}
           />
           <Route
-            path="/store-admin/workers/form"
-            element={<AjouterOuvrierPage />}
-          />
-          <Route
             path="/store-admin/worker-plannings"
             element={<WorkerPlanningsPage />}
           />
@@ -109,13 +105,29 @@ export function AppRoutingSetup() {
             element={<BonReceptionPage />}
           />
           <Route
-            path="/store-admin/reception-vouchers/add"
-            element={<BonReceptionFormPage mode="add" />}
-          />
+  path="/store-admin/reception-vouchers/add"
+  element={
+    <BonReceptionFormPage
+      mode="add"
+      onSubmit={async (data, mode) => {
+        console.log("Données :", data);
+        console.log("Mode :", mode);
+      }}
+    />
+  }
+/>
           <Route
-            path="/store-admin/reception-vouchers/edit/:id"
-            element={<BonReceptionFormPage mode="edit" />}
-          />
+  path="/store-admin/reception-vouchers/edit/:id"
+  element={
+    <BonReceptionFormPage
+      mode="edit"
+      onSubmit={async (data, mode) => {
+        console.log("Modification ID :", data);
+        console.log("Mode :", mode);
+      }}
+    />
+  }
+/>
 
           {/* Traitement de base */}
           <Route

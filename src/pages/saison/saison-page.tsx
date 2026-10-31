@@ -86,12 +86,20 @@ export function SaisonPage() {
     <>
       <Container>
         <PageHeader
-          title="Saisons"
-          description="Gérez les campagnes et les paramètres de production d'huile d'olive."
-          icon={<Sprout className="size-7" strokeWidth={2} />}
-          actionLabel="Ajouter une saison"
-          onAction={handleAdd}
-        />
+  title="Saisons"
+  description="Gérez les campagnes et les paramètres de production d'huile d'olive."
+  icon={<Sprout className="size-7" strokeWidth={2} />}
+  actions={
+    <Button
+      type="button"
+      onClick={handleAdd}
+      className="h-11 shrink-0 gap-2 rounded-xl bg-[#556B2F] px-5 font-semibold text-white hover:bg-[#465A27]"
+    >
+      <Plus className="size-4" />
+      Ajouter une saison
+    </Button>
+  }
+/>
       </Container>
 
       <Container>

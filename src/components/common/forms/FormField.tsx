@@ -6,6 +6,7 @@ interface FormFieldProps {
   icon?: ReactNode;
   unit?: string;
   hint?: string;
+  required?: boolean;
   children: ReactNode;
 }
 
@@ -15,6 +16,7 @@ export function FormField({
   icon,
   unit,
   hint,
+  required = true,
   children,
 }: FormFieldProps) {
   return (
@@ -24,7 +26,7 @@ export function FormField({
         className="mb-2 flex items-center gap-1.5 text-[13px] font-semibold text-[#243047]"
       >
         {label}
-        <span className="text-red-500">*</span>
+        {required && <span className="text-red-500">*</span>}
       </label>
 
       <div className="group relative">
