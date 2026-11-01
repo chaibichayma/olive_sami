@@ -1,21 +1,31 @@
+
 import { useMemo, useState, type FormEvent } from "react";
 
 import {
   Tags,
   Plus,
   Download,
-  Pencil,
-  Trash2,
   ArrowUp,
   ArrowDown,
   RefreshCw,
-  X,
   Search,
 } from "lucide-react";
 
 // Composants réutilisables
 import { PageHeader } from "@/components/common/PageHeader";
 import { Pagination } from "@/components/common/Pagination";
+import { FormModal } from "@/components/common/FormModal";
+import { ConfirmDeleteDialog } from "@/components/common/ConfirmDeleteDialog";
+
+import TableActionColumns, {
+  TableActionHeaders,
+} from "@/components/common/TableActionColumns";
+
+import { exportCsv } from "@/utils/exportCsv";
+
+// ============================================================
+// TYPES
+// ============================================================
 
 type SensMouvement = "+" | "-";
 
@@ -32,6 +42,10 @@ interface FormulaireRubrique {
   sensMouvement: SensMouvement;
 }
 
+// ============================================================
+// DONNÉES INITIALES
+// ============================================================
+
 const DONNEES_INITIALES: Rubrique[] = [
   { id: 1, code: "RUB001", libelle: "Entrée d'huile", sensMouvement: "+" },
   { id: 2, code: "RUB002", libelle: "Sortie d'huile", sensMouvement: "-" },
@@ -43,36 +57,48 @@ const DONNEES_INITIALES: Rubrique[] = [
   { id: 8, code: "RUB008", libelle: "Ajustement négatif", sensMouvement: "-" },
 ];
 
-
 const FORMULAIRE_INITIAL: FormulaireRubrique = {
   code: "",
   libelle: "",
   sensMouvement: "+",
 };
 
+// ============================================================
+// PAGE PRINCIPALE
+// ============================================================
+
 export default function RubriquesPage() {
-  // États
+  // Données
   const [rubriques, setRubriques] =
     useState<Rubrique[]>(DONNEES_INITIALES);
 
+  // Filtres
   const [filtreCode, setFiltreCode] = useState("tous");
-  const [filtreSens, setFiltreSens] = useState("tous");
-  const [taillePage, setTaillePage] = useState(10);
+  const [filtreSens, setFiltreSens] = useState<
+    "tous" | SensMouvement
+  >("tous");
 
+  // Pagination
+  const [taillePage, setTaillePage] = useState(10);
   const [page, setPage] = useState(1);
 
+  // Modal
   const [modalOuverte, setModalOuverte] = useState(false);
-
   const [rubriqueEnEdition, setRubriqueEnEdition] =
     useState<Rubrique | null>(null);
 
+  // Suppression
   const [rubriqueASupprimer, setRubriqueASupprimer] =
     useState<Rubrique | null>(null);
 
+  // Formulaire
   const [formulaire, setFormulaire] =
     useState<FormulaireRubrique>(FORMULAIRE_INITIAL);
 
-  // Filtrage
+  // ==========================================================
+  // FILTRAGE
+  // ==========================================================
+
   const rubriquesFiltrees = useMemo(() => {
     return rubriques.filter((rubrique) => {
       const correspondCode =
@@ -86,37 +112,32 @@ export default function RubriquesPage() {
     });
   }, [rubriques, filtreCode, filtreSens]);
 
-  // Pagination
+  // ==========================================================
+  // PAGINATION
+  // ==========================================================
+
   const totalPages = Math.max(
-  1,
-  Math.ceil(rubriquesFiltrees.length / taillePage)
-);
+    1,
+    Math.ceil(rubriquesFiltrees.length / taillePage)
+  );
 
-const pageCourante = Math.min(page, totalPages);
+  const pageCourante = Math.min(page, totalPages);
 
-const debut =
-  rubriquesFiltrees.length === 0
-    ? 0
-    : (pageCourante - 1) * taillePage + 1;
+  const rubriquesAffichees = rubriquesFiltrees.slice(
+    (pageCourante - 1) * taillePage,
+    pageCourante * taillePage
+  );
 
-const fin = Math.min(
-  pageCourante * taillePage,
-  rubriquesFiltrees.length
-);
+  // ==========================================================
+  // OUVERTURE DU FORMULAIRE
+  // ==========================================================
 
-const rubriquesAffichees = rubriquesFiltrees.slice(
-  (pageCourante - 1) * taillePage,
-  pageCourante * taillePage
-);
-
-  // Ouverture du formulaire d'ajout
   function ouvrirAjout() {
     setRubriqueEnEdition(null);
     setFormulaire(FORMULAIRE_INITIAL);
     setModalOuverte(true);
   }
 
-  // Ouverture du formulaire de modification
   function ouvrirEdition(rubrique: Rubrique) {
     setRubriqueEnEdition(rubrique);
 
@@ -129,14 +150,16 @@ const rubriquesAffichees = rubriquesFiltrees.slice(
     setModalOuverte(true);
   }
 
-  // Fermeture du formulaire
   function fermerModal() {
     setModalOuverte(false);
     setRubriqueEnEdition(null);
     setFormulaire(FORMULAIRE_INITIAL);
   }
 
-  // Enregistrement
+  // ==========================================================
+  // ENREGISTREMENT
+  // ==========================================================
+
   function enregistrerRubrique(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
@@ -187,7 +210,10 @@ const rubriquesAffichees = rubriquesFiltrees.slice(
     fermerModal();
   }
 
-  // Suppression
+  // ==========================================================
+  // SUPPRESSION
+  // ==========================================================
+
   function supprimerRubrique() {
     if (!rubriqueASupprimer) return;
 
@@ -199,53 +225,50 @@ const rubriquesAffichees = rubriquesFiltrees.slice(
     setPage(1);
   }
 
-  // Réinitialisation des filtres
+  // ==========================================================
+  // RÉINITIALISATION DES FILTRES
+  // ==========================================================
+
   function actualiser() {
     setFiltreCode("tous");
     setFiltreSens("tous");
     setPage(1);
   }
 
-  // Export CSV
+  // ==========================================================
+  // EXPORT CSV
+  // ==========================================================
+
   function exporterCSV() {
-    const lignes = [
-      ["Code", "Libellé", "Sens de mouvement"],
-      ...rubriquesFiltrees.map((r) => [
-        r.code,
-        r.libelle,
-        r.sensMouvement,
-      ]),
-    ];
-
-    const contenu =
-      "\uFEFF" +
-      lignes
-        .map((ligne) =>
-          ligne
-            .map((valeur) => `"${valeur.replace(/"/g, '""')}"`)
-            .join(";")
-        )
-        .join("\r\n");
-
-    const fichier = new Blob([contenu], {
-      type: "text/csv;charset=utf-8;",
+    exportCsv({
+      data: rubriquesFiltrees,
+      columns: [
+        {
+          header: "Code",
+          accessor: (rubrique) => rubrique.code,
+        },
+        {
+          header: "Libellé",
+          accessor: (rubrique) => rubrique.libelle,
+        },
+        {
+          header: "Sens de mouvement",
+          accessor: (rubrique) => rubrique.sensMouvement,
+        },
+      ],
+      filename: "rubriques.csv",
     });
-
-    const url = URL.createObjectURL(fichier);
-    const lien = document.createElement("a");
-
-    lien.href = url;
-    lien.download = "rubriques.csv";
-    lien.click();
-
-    URL.revokeObjectURL(url);
   }
+
+  // ==========================================================
+  // AFFICHAGE
+  // ==========================================================
 
   return (
     <div className="min-h-screen p-4 text-[#243047] sm:p-6">
       <div className="mx-auto max-w-[1600px] space-y-5">
 
-        {/* HEADER RÉUTILISABLE */}
+        {/* HEADER */}
         <PageHeader
           title="Rubriques"
           description="Organisez et gérez les rubriques de votre application."
@@ -294,7 +317,7 @@ const rubriquesAffichees = rubriquesFiltrees.slice(
               </select>
             </div>
 
-            {/* Filtre Entrées */}
+            {/* Filtre entrées */}
             <button
               type="button"
               onClick={() => {
@@ -312,7 +335,7 @@ const rubriquesAffichees = rubriquesFiltrees.slice(
               Entrées (+)
             </button>
 
-            {/* Filtre Sorties */}
+            {/* Filtre sorties */}
             <button
               type="button"
               onClick={() => {
@@ -345,7 +368,7 @@ const rubriquesAffichees = rubriquesFiltrees.slice(
         {/* TABLEAU */}
         <section className="overflow-hidden rounded-2xl border border-[#e8ede1] bg-white shadow-[0_5px_22px_rgba(45,62,28,0.045)]">
 
-          {/* En-tête du tableau */}
+          {/* EN-TÊTE DU TABLEAU */}
           <div className="flex flex-col justify-between gap-3 border-b border-[#edf0e9] px-5 py-4 sm:flex-row sm:items-center sm:px-6">
             <div>
               <h2 className="text-base font-bold text-[#26364a]">
@@ -367,7 +390,7 @@ const rubriquesAffichees = rubriquesFiltrees.slice(
             </button>
           </div>
 
-          {/* Contenu du tableau */}
+          {/* CONTENU DU TABLEAU */}
           <div className="overflow-x-auto px-4 pt-3 sm:px-6">
             <table className="w-full min-w-[760px] border-separate border-spacing-0">
               <thead>
@@ -388,84 +411,45 @@ const rubriquesAffichees = rubriquesFiltrees.slice(
                     Sens de mouvement
                   </th>
 
-                  <th className="w-[110px] px-3 py-4 text-center text-xs font-bold text-[#334155]">
-                    Modifier
-                  </th>
-
-                  <th className="w-[110px] rounded-r-xl px-3 py-4 text-center text-xs font-bold text-[#334155]">
-                    Supprimer
-                  </th>
+                  <TableActionHeaders />
                 </tr>
               </thead>
 
               <tbody>
-                {rubriquesAffichees.map((rubrique, index) => {
-                  const entree = rubrique.sensMouvement === "+";
+                {rubriquesAffichees.map((rubrique, index) => (
+                  <tr
+                    key={rubrique.id}
+                    className="group transition-colors hover:bg-[#f7f9f4]"
+                  >
+                    <td className="border-b border-[#edf0e9] px-4 py-4 text-sm text-[#526075]">
+                      {(pageCourante - 1) * taillePage + index + 1}
+                    </td>
 
-                  return (
-                    <tr
-                      key={rubrique.id}
-                      className="group transition-colors hover:bg-[#f7f9f4]"
-                    >
-                      <td className="border-b border-[#edf0e9] px-4 py-4 text-sm text-[#526075]">
-                        {(pageCourante - 1) * taillePage + index + 1}
-                      </td>
+                    <td className="border-b border-[#edf0e9] px-4 py-4">
+                      <span className="inline-flex rounded-xl bg-[#eaf0e3] px-3.5 py-2 font-mono text-xs font-bold tracking-wide text-[#3c571f]">
+                        {rubrique.code}
+                      </span>
+                    </td>
 
-                      <td className="border-b border-[#edf0e9] px-4 py-4">
-                        <span className="inline-flex rounded-xl bg-[#eaf0e3] px-3.5 py-2 font-mono text-xs font-bold tracking-wide text-[#3c571f]">
-                          {rubrique.code}
-                        </span>
-                      </td>
+                    <td className="border-b border-[#edf0e9] px-4 py-4 text-sm font-medium text-[#39465b]">
+                      {rubrique.libelle}
+                    </td>
 
-                      <td className="border-b border-[#edf0e9] px-4 py-4 text-sm font-medium text-[#39465b]">
-                        {rubrique.libelle}
-                      </td>
+                    <td className="border-b border-[#edf0e9] px-4 py-4">
+                      <MovementBadge sens={rubrique.sensMouvement} />
+                    </td>
 
-                      <td className="border-b border-[#edf0e9] px-4 py-4">
-                        <span
-                          className={`inline-flex min-w-[155px] items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-semibold ${
-                            entree
-                              ? "bg-[#e8f7e8] text-[#218333]"
-                              : "bg-[#ffebeb] text-[#d92d20]"
-                          }`}
-                        >
-                          {entree ? (
-                            <ArrowUp size={19} strokeWidth={3} />
-                          ) : (
-                            <ArrowDown size={19} strokeWidth={3} />
-                          )}
+                    {/* ACTIONS RÉUTILISABLES */}
+                    <TableActionColumns
+                      onEdit={() => ouvrirEdition(rubrique)}
+                      onDelete={() => setRubriqueASupprimer(rubrique)}
+                      editLabel={`Modifier}`}
+                      deleteLabel={`Supprimer`}
+                    />
+                  </tr>
+                ))}
 
-                          {entree ? "Entrée (+)" : "Sortie (-)"}
-                        </span>
-                      </td>
-
-                      <td className="border-b border-[#edf0e9] px-3 py-3 text-center">
-                        <button
-                          type="button"
-                          title={`Modifier ${rubrique.libelle}`}
-                          aria-label={`Modifier ${rubrique.libelle}`}
-                          onClick={() => ouvrirEdition(rubrique)}
-                          className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-[#dce4f0] bg-[#f0f4fa] text-[#34465f] transition hover:border-[#aabbd5] hover:bg-[#e2eaf6] active:scale-95"
-                        >
-                          <Pencil size={18} />
-                        </button>
-                      </td>
-
-                      <td className="border-b border-[#edf0e9] px-3 py-3 text-center">
-                        <button
-                          type="button"
-                          title={`Supprimer ${rubrique.libelle}`}
-                          aria-label={`Supprimer ${rubrique.libelle}`}
-                          onClick={() => setRubriqueASupprimer(rubrique)}
-                          className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-[#ffd8d8] bg-[#fff0f0] text-[#e32626] transition hover:border-[#ffaaaa] hover:bg-[#ffe1e1] active:scale-95"
-                        >
-                          <Trash2 size={18} />
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-
+                {/* ÉTAT VIDE */}
                 {rubriquesAffichees.length === 0 && (
                   <tr>
                     <td colSpan={6} className="px-4 py-16 text-center">
@@ -495,218 +479,189 @@ const rubriquesAffichees = rubriquesFiltrees.slice(
             </table>
           </div>
 
-          {/* PAGINATION RÉUTILISABLE */}
+          {/* PAGINATION */}
           <div className="border-t border-[#edf0e9] px-5 py-4 sm:px-6">
-           <Pagination
-  currentPage={pageCourante}
-  totalPages={totalPages}
-  totalItems={rubriquesFiltrees.length}
-  pageSize={taillePage}
-  onPageChange={setPage}
-  onPageSizeChange={(newSize) => {
-    setTaillePage(newSize);
-    setPage(1);
-  }}
-/>
+            <Pagination
+              currentPage={pageCourante}
+              totalPages={totalPages}
+              totalItems={rubriquesFiltrees.length}
+              pageSize={taillePage}
+              itemLabel="rubrique(s)"
+              onPageChange={setPage}
+              onPageSizeChange={(newSize) => {
+                setTaillePage(newSize);
+                setPage(1);
+              }}
+            />
           </div>
         </section>
       </div>
 
       {/* MODAL AJOUT / MODIFICATION */}
-      {modalOuverte && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-[#18251a]/40 p-4 backdrop-blur-[3px]"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget) fermerModal();
-          }}
+      <FormModal
+        open={modalOuverte}
+        title={
+          rubriqueEnEdition
+            ? "Modifier la rubrique"
+            : "Ajouter une rubrique"
+        }
+        description="Complétez les informations ci-dessous."
+        onClose={fermerModal}
+      >
+        <form
+          onSubmit={enregistrerRubrique}
+          className="space-y-5 p-6"
         >
-          <div className="w-full max-w-lg overflow-hidden rounded-2xl border border-[#e8ede1] bg-white shadow-2xl">
-
-            {/* Header modal */}
-            <div className="flex items-center justify-between border-b border-[#edf0e9] px-6 py-5">
-              <div>
-                <h2 className="text-lg font-bold text-[#26364a]">
-                  {rubriqueEnEdition
-                    ? "Modifier la rubrique"
-                    : "Ajouter une rubrique"}
-                </h2>
-
-                <p className="mt-1 text-xs text-[#839080]">
-                  Complétez les informations ci-dessous.
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={fermerModal}
-                aria-label="Fermer"
-                className="rounded-xl p-2 text-[#68766b] transition hover:bg-[#f1f5ed]"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            {/* Formulaire */}
-            <form
-              onSubmit={enregistrerRubrique}
-              className="space-y-5 p-6"
+          {/* CODE */}
+          <div>
+            <label
+              htmlFor="rubrique-code"
+              className="mb-2 block text-sm font-semibold text-[#344054]"
             >
-              {/* Code */}
-              <div>
-                <label
-                  htmlFor="rubrique-code"
-                  className="mb-2 block text-sm font-semibold text-[#344054]"
-                >
-                  Code
-                </label>
+              Code
+            </label>
 
-                <input
-                  id="rubrique-code"
-                  required
-                  maxLength={30}
-                  value={formulaire.code}
-                  onChange={(e) =>
-                    setFormulaire((f) => ({
-                      ...f,
-                      code: e.target.value,
-                    }))
-                  }
-                  placeholder="Ex. RUB009"
-                  className="h-11 w-full rounded-xl border border-[#dfe6dc] px-3.5 text-sm outline-none focus:border-[#82995e] focus:ring-4 focus:ring-[#82995e]/10"
-                />
-              </div>
-
-              {/* Libellé */}
-              <div>
-                <label
-                  htmlFor="rubrique-libelle"
-                  className="mb-2 block text-sm font-semibold text-[#344054]"
-                >
-                  Libellé
-                </label>
-
-                <input
-                  id="rubrique-libelle"
-                  required
-                  maxLength={120}
-                  value={formulaire.libelle}
-                  onChange={(e) =>
-                    setFormulaire((f) => ({
-                      ...f,
-                      libelle: e.target.value,
-                    }))
-                  }
-                  placeholder="Nom de la rubrique"
-                  className="h-11 w-full rounded-xl border border-[#dfe6dc] px-3.5 text-sm outline-none focus:border-[#82995e] focus:ring-4 focus:ring-[#82995e]/10"
-                />
-              </div>
-
-              {/* Sens de mouvement */}
-              <div>
-                <label className="mb-3 block text-sm font-semibold text-[#344054]">
-                  Sens de mouvement
-                </label>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <SensOption
-                    actif={formulaire.sensMouvement === "+"}
-                    sens="+"
-                    libelle="Entrée"
-                    onClick={() =>
-                      setFormulaire((f) => ({
-                        ...f,
-                        sensMouvement: "+",
-                      }))
-                    }
-                  />
-
-                  <SensOption
-                    actif={formulaire.sensMouvement === "-"}
-                    sens="-"
-                    libelle="Sortie"
-                    onClick={() =>
-                      setFormulaire((f) => ({
-                        ...f,
-                        sensMouvement: "-",
-                      }))
-                    }
-                  />
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="flex justify-end gap-3 border-t border-[#edf0e9] pt-5">
-                <button
-                  type="button"
-                  onClick={fermerModal}
-                  className="rounded-xl border border-[#dfe6dc] px-4 py-2.5 text-sm font-semibold text-[#526075] transition hover:bg-[#f7f9f4]"
-                >
-                  Annuler
-                </button>
-
-                <button
-                  type="submit"
-                  className="inline-flex items-center gap-2 rounded-xl bg-[#586f2e] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#455a24]"
-                >
-                  <Plus size={17} />
-
-                  {rubriqueEnEdition ? "Enregistrer" : "Ajouter"}
-                </button>
-              </div>
-            </form>
+            <input
+              id="rubrique-code"
+              required
+              maxLength={30}
+              value={formulaire.code}
+              onChange={(e) =>
+                setFormulaire((f) => ({
+                  ...f,
+                  code: e.target.value,
+                }))
+              }
+              placeholder="Ex. RUB009"
+              className="h-11 w-full rounded-xl border border-[#dfe6dc] px-3.5 text-sm outline-none focus:border-[#82995e] focus:ring-4 focus:ring-[#82995e]/10"
+            />
           </div>
-        </div>
-      )}
+
+          {/* LIBELLÉ */}
+          <div>
+            <label
+              htmlFor="rubrique-libelle"
+              className="mb-2 block text-sm font-semibold text-[#344054]"
+            >
+              Libellé
+            </label>
+
+            <input
+              id="rubrique-libelle"
+              required
+              maxLength={120}
+              value={formulaire.libelle}
+              onChange={(e) =>
+                setFormulaire((f) => ({
+                  ...f,
+                  libelle: e.target.value,
+                }))
+              }
+              placeholder="Nom de la rubrique"
+              className="h-11 w-full rounded-xl border border-[#dfe6dc] px-3.5 text-sm outline-none focus:border-[#82995e] focus:ring-4 focus:ring-[#82995e]/10"
+            />
+          </div>
+
+          {/* SENS DE MOUVEMENT */}
+          <div>
+            <label className="mb-3 block text-sm font-semibold text-[#344054]">
+              Sens de mouvement
+            </label>
+
+            <div className="grid grid-cols-2 gap-3">
+              <SensOption
+                actif={formulaire.sensMouvement === "+"}
+                sens="+"
+                libelle="Entrée"
+                onClick={() =>
+                  setFormulaire((f) => ({
+                    ...f,
+                    sensMouvement: "+",
+                  }))
+                }
+              />
+
+              <SensOption
+                actif={formulaire.sensMouvement === "-"}
+                sens="-"
+                libelle="Sortie"
+                onClick={() =>
+                  setFormulaire((f) => ({
+                    ...f,
+                    sensMouvement: "-",
+                  }))
+                }
+              />
+            </div>
+          </div>
+
+          {/* ACTIONS DU FORMULAIRE */}
+          <div className="flex justify-end gap-3 border-t border-[#edf0e9] pt-5">
+            <button
+              type="button"
+              onClick={fermerModal}
+              className="rounded-xl border border-[#dfe6dc] px-4 py-2.5 text-sm font-semibold text-[#526075] transition hover:bg-[#f7f9f4]"
+            >
+              Annuler
+            </button>
+
+            <button
+              type="submit"
+              className="inline-flex items-center gap-2 rounded-xl bg-[#586f2e] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#455a24]"
+            >
+              <Plus size={17} />
+              {rubriqueEnEdition ? "Enregistrer" : "Ajouter"}
+            </button>
+          </div>
+        </form>
+      </FormModal>
 
       {/* CONFIRMATION DE SUPPRESSION */}
-      {rubriqueASupprimer && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-[#18251a]/40 p-4 backdrop-blur-[3px]">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
-            <div className="flex items-start gap-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-600">
-                <Trash2 size={22} />
-              </div>
-
-              <div>
-                <h2 className="text-lg font-bold text-[#26364a]">
-                  Supprimer la rubrique ?
-                </h2>
-
-                <p className="mt-2 text-sm leading-6 text-[#68766b]">
-                  Voulez-vous vraiment supprimer la rubrique{" "}
-                  <strong>{rubriqueASupprimer.libelle}</strong> ?
-                  Cette action est irréversible.
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-6 flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => setRubriqueASupprimer(null)}
-                className="rounded-xl border border-[#dfe6dc] px-4 py-2.5 text-sm font-semibold text-[#526075] hover:bg-[#f7f9f4]"
-              >
-                Annuler
-              </button>
-
-              <button
-                type="button"
-                onClick={supprimerRubrique}
-                className="rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-700"
-              >
-                Supprimer
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDeleteDialog
+        open={!!rubriqueASupprimer}
+        title="Supprimer la rubrique ?"
+        itemName={rubriqueASupprimer?.libelle ?? ""}
+        description="Cette action est irréversible."
+        onCancel={() => setRubriqueASupprimer(null)}
+        onConfirm={supprimerRubrique}
+      />
     </div>
   );
 }
 
-/* ============================================================
-   OPTION SENS DE MOUVEMENT
-============================================================ */
+// ============================================================
+// COMPOSANT SPÉCIFIQUE : BADGE DU SENS DE MOUVEMENT
+// ============================================================
+
+interface MovementBadgeProps {
+  sens: SensMouvement;
+}
+
+function MovementBadge({ sens }: MovementBadgeProps) {
+  const entree = sens === "+";
+
+  return (
+    <span
+      className={`inline-flex min-w-[155px] items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-semibold ${
+        entree
+          ? "bg-[#e8f7e8] text-[#218333]"
+          : "bg-[#ffebeb] text-[#d92d20]"
+      }`}
+    >
+      {entree ? (
+        <ArrowUp size={19} strokeWidth={3} />
+      ) : (
+        <ArrowDown size={19} strokeWidth={3} />
+      )}
+
+      {entree ? "Entrée (+)" : "Sortie (-)"}
+    </span>
+  );
+}
+
+// ============================================================
+// COMPOSANT SPÉCIFIQUE : OPTION DU SENS DE MOUVEMENT
+// ============================================================
 
 interface SensOptionProps {
   actif: boolean;
