@@ -1,17 +1,17 @@
 import { useMemo, useState } from "react";
-import {
-  Building2,
-  Filter,
-} from "lucide-react";
-
-
+import { Building2 } from "lucide-react";
 
 import OilReceptionFilters from "@/components/traitement-bases/OilReceptionFilters";
-import { Compte } from "@/components/traitement-bases/AccountMultiSelect";
-import ReceptionTable, { BonReception } from "@/components/traitement-bases/ReceptionTable";
+import type { Compte } from "@/components/traitement-bases/AccountMultiSelect";
+import ReceptionTable, {
+  type BonReception,
+} from "@/components/traitement-bases/ReceptionTable";
 import ReceptionIndicators from "@/components/traitement-bases/ReceptionIndicators";
 import SelectedAccounts from "@/components/traitement-bases/SelectedAccounts";
 import BonDetailsModal from "@/components/traitement-bases/BonDetailsModal";
+
+import FilterSection from "@/components/common/FilterSection";
+import { exportCsv } from "@/utils/exportCsv";
 
 // --------------------------------------------------
 // DONNÉES INITIALES
@@ -166,14 +166,14 @@ function formatMoney(value: number) {
 }
 
 // --------------------------------------------------
-// COMPOSANT PRINCIPAL
+// PAGE PRINCIPALE
 // --------------------------------------------------
 
 export default function TraitementBasesPage() {
   // Données
   const [bons] = useState<BonReception[]>(BONS_INITIAUX);
 
-  // Filtres
+  // Filtres principaux
   const [typeHuile, setTypeHuile] = useState("");
   const [comptesSelectionnes, setComptesSelectionnes] = useState<number[]>([]);
 
@@ -186,7 +186,7 @@ export default function TraitementBasesPage() {
   const [page, setPage] = useState(1);
   const [taillePage, setTaillePage] = useState(5);
 
-  // Détails
+  // Détails du bon
   const [detailsBon, setDetailsBon] = useState<BonReception | null>(null);
 
   // --------------------------------------------------
@@ -255,10 +255,8 @@ export default function TraitementBasesPage() {
     () =>
       bonsFiltres.reduce(
         (acc, bon) => ({
-          quantiteOlives:
-            acc.quantiteOlives + bon.quantiteOlives,
-          quantiteHuile:
-            acc.quantiteHuile + bon.quantiteHuile,
+          quantiteOlives: acc.quantiteOlives + bon.quantiteOlives,
+          quantiteHuile: acc.quantiteHuile + bon.quantiteHuile,
           montantTotal: acc.montantTotal + bon.montant,
           montantPaye: acc.montantPaye + bon.montantPaye,
           resteAPayer: acc.resteAPayer + bon.resteAPayer,
@@ -292,7 +290,7 @@ export default function TraitementBasesPage() {
   }, [bonsFiltres, pageActuelle, taillePage]);
 
   // --------------------------------------------------
-  // MODIFICATION DES FILTRES
+  // MODIFICATION DES CRITÈRES
   // --------------------------------------------------
 
   function modifierCritere() {
@@ -308,27 +306,24 @@ export default function TraitementBasesPage() {
   function appliquerRecherche() {
     if (!typeHuile) {
       setRechercheLancee(false);
-      setMessageErreur(
-        "Veuillez sélectionner un type d’huile."
-      );
+      setMessageErreur("Veuillez sélectionner un type d’huile.");
       return;
     }
 
     if (comptesSelectionnes.length === 0) {
       setRechercheLancee(false);
-      setMessageErreur(
-        "Veuillez sélectionner au moins un compte."
-      );
+      setMessageErreur("Veuillez sélectionner au moins un compte.");
       return;
     }
 
     setMessageErreur("");
     setRechercheLancee(true);
+    setRechercheTableau("");
     setPage(1);
   }
 
   // --------------------------------------------------
-  // RÉINITIALISER LES FILTRES
+  // RÉINITIALISER LES FILTRES PRINCIPAUX
   // --------------------------------------------------
 
   function reinitialiser() {
@@ -346,67 +341,63 @@ export default function TraitementBasesPage() {
   // --------------------------------------------------
 
   function exporterCSV() {
-    if (!bonsFiltres.length) return;
-
-    const entetes = [
-      "Référence",
-      "Nom du compte",
-      "Téléphone",
-      "Numéro de compte",
-      "Date de réception",
-      "Type d'huile",
-      "Quantité d'olives (kg)",
-      "Quantité d'huile (kg)",
-      "Montant (DT)",
-      "Montant payé (DT)",
-      "Reste à payer (DT)",
-      "Statut",
-    ];
-
-    const lignes = bonsFiltres.map((bon) => {
-      const compte = COMPTES.find(
-        (item) => item.id === bon.compteId
-      );
-
-      return [
-        bon.reference,
-        compte?.nom ?? "",
-        compte?.telephone ?? "",
-        compte?.numero ?? "",
-        formatDate(bon.date),
-        bon.typeHuile,
-        bon.quantiteOlives,
-        bon.quantiteHuile,
-        bon.montant.toFixed(2),
-        bon.montantPaye.toFixed(2),
-        bon.resteAPayer.toFixed(2),
-        bon.statut,
-      ];
+    exportCsv({
+      data: bonsFiltres,
+      filename: "bons-reception-traitement.csv",
+      columns: [
+        {
+          header: "Référence",
+          accessor: (bon) => bon.reference,
+        },
+        {
+          header: "Nom du compte",
+          accessor: (bon) =>
+            COMPTES.find((compte) => compte.id === bon.compteId)?.nom ?? "",
+        },
+        {
+          header: "Téléphone",
+          accessor: (bon) =>
+            COMPTES.find((compte) => compte.id === bon.compteId)?.telephone ?? "",
+        },
+        {
+          header: "Numéro de compte",
+          accessor: (bon) =>
+            COMPTES.find((compte) => compte.id === bon.compteId)?.numero ?? "",
+        },
+        {
+          header: "Date de réception",
+          accessor: (bon) => formatDate(bon.date),
+        },
+        {
+          header: "Type d'huile",
+          accessor: (bon) => bon.typeHuile,
+        },
+        {
+          header: "Quantité d'olives (kg)",
+          accessor: (bon) => bon.quantiteOlives,
+        },
+        {
+          header: "Quantité d'huile (kg)",
+          accessor: (bon) => bon.quantiteHuile,
+        },
+        {
+          header: "Montant (DT)",
+          accessor: (bon) => bon.montant.toFixed(2),
+        },
+        {
+          header: "Montant payé (DT)",
+          accessor: (bon) => bon.montantPaye.toFixed(2),
+        },
+        {
+          header: "Reste à payer (DT)",
+          accessor: (bon) => bon.resteAPayer.toFixed(2),
+        },
+        {
+          header: "Statut",
+          accessor: (bon) => bon.statut,
+        },
+      ],
     });
-
-    const contenu = [entetes, ...lignes]
-      .map((ligne) =>
-        ligne
-          .map((value) => `"${String(value).replace(/"/g, '""')}"`)
-          .join(";")
-      )
-      .join("\r\n");
-
-    const blob = new Blob(["\uFEFF" + contenu], {
-      type: "text/csv;charset=utf-8;",
-    });
-
-    const url = URL.createObjectURL(blob);
-    const lien = document.createElement("a");
-
-    lien.href = url;
-    lien.download = "bons-reception-traitement.csv";
-
-    document.body.appendChild(lien);
-    lien.click();
-    lien.remove();
-
-    URL.revokeObjectURL(url);
   }
 
   // --------------------------------------------------
@@ -465,17 +456,21 @@ export default function TraitementBasesPage() {
         </header>
 
         {/* FILTRES */}
-        <OilReceptionFilters
-          comptes={COMPTES}
-          typeHuile={typeHuile}
-          selectedAccountIds={comptesSelectionnes}
-          error={messageErreur}
-          onTypeChange={setTypeHuile}
-          onAccountsChange={setComptesSelectionnes}
-          onSearch={appliquerRecherche}
-          onReset={reinitialiser}
-          onCriteriaChange={modifierCritere}
-        />
+        <FilterSection>
+          <div className="w-full">
+            <OilReceptionFilters
+              comptes={COMPTES}
+              typeHuile={typeHuile}
+              selectedAccountIds={comptesSelectionnes}
+              error={messageErreur}
+              onTypeChange={setTypeHuile}
+              onAccountsChange={setComptesSelectionnes}
+              onSearch={appliquerRecherche}
+              onReset={reinitialiser}
+              onCriteriaChange={modifierCritere}
+            />
+          </div>
+        </FilterSection>
 
         {/* INDICATEURS */}
         <ReceptionIndicators
