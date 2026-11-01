@@ -1,4 +1,4 @@
-import { Pencil, Trash2 } from 'lucide-react';
+import { Pencil, Trash2 } from "lucide-react";
 
 type TableRowActionsProps = {
   onEdit?: () => void;
@@ -10,11 +10,11 @@ type TableRowActionsProps = {
 export default function TableRowActions({
   onEdit,
   onDelete,
-  editLabel = 'Modifier',
-  deleteLabel = 'Supprimer',
+  editLabel = "Modifier",
+  deleteLabel = "Supprimer",
 }: TableRowActionsProps) {
   return (
-    <div className="flex items-center justify-end gap-2">
+    <div className="flex h-full items-center justify-center gap-2">
       {onEdit && (
         <button
           type="button"

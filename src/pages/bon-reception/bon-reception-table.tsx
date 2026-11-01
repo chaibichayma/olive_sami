@@ -1,16 +1,12 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import type {
   ColDef,
-  GridApi,
-  GridReadyEvent,
   ICellRendererParams,
 } from "ag-grid-community";
 
 import {
-  CheckCircle2,
-  Clock3,
   Eye,
   Pencil,
   Trash2,
@@ -21,17 +17,35 @@ import { StatusFilter } from "@/components/common/StatusFilter";
 import { Pagination } from "@/components/common/Pagination";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { DataTable } from "@/components/common/DataTable";
-import { BonReception, DateRange, StatusFilterItem } from "@/components/reception/bon-reception.types";
+
+
+import ActionIconButton from "@/components/common/ActionIconButton";
+
+import type {
+  BonReception,
+  DateRange,
+  StatusFilterItem,
+} from "@/components/reception/bon-reception.types";
+
 import { BonReceptionHistory } from "@/components/reception/BonReceptionHistory";
 
+import { usePagination } from "@/hooks/usePagination";
+import { exportCsv } from "@/utils/exportCsv";
+import { StatusBadge } from "@/components/common/StatusBadge";
 
-
+// --------------------------------------------------
+// PROPS
+// --------------------------------------------------
 
 interface BonReceptionTableProps {
   bons?: BonReception[];
   onEdit?: (bon: BonReception) => void;
   onDelete?: (bon: BonReception) => void;
 }
+
+// --------------------------------------------------
+// FORMATAGE
+// --------------------------------------------------
 
 const formatNumber = (value: number) =>
   new Intl.NumberFormat("fr-FR").format(value || 0);
@@ -42,24 +56,9 @@ const formatPrice = (value: number) =>
     maximumFractionDigits: 2,
   }).format(value || 0);
 
-function getStatusClass(status: string) {
-  switch (status) {
-    case "En cours":
-      return "bg-[#dcfce7] text-[#16833b]";
-
-    case "Terminé":
-      return "bg-[#dbeafe] text-[#2563eb]";
-
-    case "En attente":
-      return "bg-[#ffedd5] text-[#ea580c]";
-
-    case "Annulé":
-      return "bg-[#fee2e2] text-[#dc2626]";
-
-    default:
-      return "bg-gray-100 text-gray-600";
-  }
-}
+// --------------------------------------------------
+// CONVERSION DES DATES
+// --------------------------------------------------
 
 function parseDate(value: string): Date | null {
   if (!value) return null;
@@ -67,6 +66,7 @@ function parseDate(value: string): Date | null {
   // Format ISO : YYYY-MM-DD
   if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
     const date = new Date(`${value}T00:00:00`);
+
     return Number.isNaN(date.getTime()) ? null : date;
   }
 
@@ -77,18 +77,23 @@ function parseDate(value: string): Date | null {
     const date = new Date(
       Number(match[3]),
       Number(match[2]) - 1,
-      Number(match[1]),
+      Number(match[1])
     );
 
     return Number.isNaN(date.getTime()) ? null : date;
   }
 
   const date = new Date(value);
+
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
+// --------------------------------------------------
+// RENDERER : RÉFÉRENCE
+// --------------------------------------------------
+
 function ReferenceRenderer(
-  params: ICellRendererParams<BonReception>,
+  params: ICellRendererParams<BonReception>
 ) {
   if (!params.data) return null;
 
@@ -97,6 +102,7 @@ function ReferenceRenderer(
       <span className="text-sm font-bold text-[#172033]">
         {params.data.reference}
       </span>
+
       <span className="text-[11px] text-[#94a3b8]">
         #{params.data.id}
       </span>
@@ -104,8 +110,12 @@ function ReferenceRenderer(
   );
 }
 
+// --------------------------------------------------
+// RENDERER : COMPTE
+// --------------------------------------------------
+
 function CompteRenderer(
-  params: ICellRendererParams<BonReception>,
+  params: ICellRendererParams<BonReception>
 ) {
   if (!params.data) return null;
 
@@ -114,6 +124,7 @@ function CompteRenderer(
       <span className="text-sm font-semibold text-[#334155]">
         {params.data.name}
       </span>
+
       <span className="text-[11px] text-[#94a3b8]">
         Compte #{params.data.compteId}
       </span>
@@ -121,30 +132,25 @@ function CompteRenderer(
   );
 }
 
+// --------------------------------------------------
+// RENDERER : STATUT
+// --------------------------------------------------
+
 function StatusRenderer(
-  params: ICellRendererParams<BonReception>,
+  params: ICellRendererParams<BonReception>
 ) {
   if (!params.data) return null;
 
   return (
     <div className="flex h-full items-center">
-      <span
-        className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold ${getStatusClass(
-          params.data.statusLib,
-        )}`}
-      >
-        {params.data.statusLib === "En cours" ||
-        params.data.statusLib === "Terminé" ? (
-          <CheckCircle2 className="size-3.5" />
-        ) : (
-          <Clock3 className="size-3.5" />
-        )}
-
-        {params.data.statusLib}
-      </span>
-    </div>
+  <StatusBadge label={params.data.statusLib} />
+</div>
   );
 }
+
+// --------------------------------------------------
+// COMPOSANT PRINCIPAL
+// --------------------------------------------------
 
 export function BonReceptionTable({
   bons = [],
@@ -153,7 +159,9 @@ export function BonReceptionTable({
 }: BonReceptionTableProps) {
   const navigate = useNavigate();
 
-  const gridApiRef = useRef<GridApi<BonReception> | null>(null);
+  // ------------------------------------------------
+  // ÉTATS
+  // ------------------------------------------------
 
   const [dateRange, setDateRange] = useState<DateRange>({
     start: "",
@@ -161,9 +169,6 @@ export function BonReceptionTable({
   });
 
   const [statusFilter, setStatusFilter] = useState("Tous");
-
-  const [pageSize, setPageSize] = useState(10);
-  const [currentPage, setCurrentPage] = useState(1);
 
   const [selectedBon, setSelectedBon] =
     useState<BonReception | null>(null);
@@ -174,21 +179,28 @@ export function BonReceptionTable({
   const [localBons, setLocalBons] =
     useState<BonReception[]>(bons);
 
+  // Synchroniser les données reçues du parent
   useEffect(() => {
     setLocalBons(bons);
   }, [bons]);
 
-  const handleGridReady = (event: GridReadyEvent<BonReception>) => {
-    gridApiRef.current = event.api;
-  };
+  // ------------------------------------------------
+  // MODIFICATION
+  // ------------------------------------------------
 
   const handleEdit = (bon: BonReception) => {
     if (onEdit) {
       onEdit(bon);
     } else {
-      navigate(`/store-admin/reception-vouchers/edit/${bon.id}`);
+      navigate(
+        `/store-admin/reception-vouchers/edit/${bon.id}`
+      );
     }
   };
+
+  // ------------------------------------------------
+  // SUPPRESSION
+  // ------------------------------------------------
 
   const handleDelete = (bon: BonReception) => {
     setSelectedBon(bon);
@@ -197,41 +209,50 @@ export function BonReceptionTable({
   const confirmDelete = () => {
     if (!selectedBon) return;
 
-    // Suppression frontend uniquement.
+    // Suppression locale
     setLocalBons((previous) =>
-      previous.filter((bon) => bon.id !== selectedBon.id),
+      previous.filter((bon) => bon.id !== selectedBon.id)
     );
 
-    // Callback facultatif pour informer le composant parent.
+    // Informer le parent si un callback est fourni
     onDelete?.(selectedBon);
 
     setSelectedBon(null);
   };
 
+  // ------------------------------------------------
+  // RÉINITIALISER LES FILTRES
+  // ------------------------------------------------
+
   const handleReset = () => {
-    setDateRange({ start: "", end: "" });
+    setDateRange({
+      start: "",
+      end: "",
+    });
+
     setStatusFilter("Tous");
-    setCurrentPage(1);
   };
 
-  const handleExport = () => {
-    gridApiRef.current?.exportDataAsCsv({
-      fileName: "bons-reception.csv",
-    });
-  };
+  // ------------------------------------------------
+  // FILTRAGE
+  // ------------------------------------------------
 
   const filteredBons = useMemo(() => {
     return localBons.filter((bon) => {
       const date = parseDate(bon.dateCreation);
 
       if (dateRange.start) {
-        const start = new Date(`${dateRange.start}T00:00:00`);
+        const start = new Date(
+          `${dateRange.start}T00:00:00`
+        );
 
         if (!date || date < start) return false;
       }
 
       if (dateRange.end) {
-        const end = new Date(`${dateRange.end}T23:59:59`);
+        const end = new Date(
+          `${dateRange.end}T23:59:59`
+        );
 
         if (!date || date > end) return false;
       }
@@ -246,6 +267,10 @@ export function BonReceptionTable({
       return true;
     });
   }, [localBons, dateRange, statusFilter]);
+
+  // ------------------------------------------------
+  // NOMBRE DE BONS PAR STATUT
+  // ------------------------------------------------
 
   const statusCounts: StatusFilterItem[] = useMemo(() => {
     const statuses = [
@@ -263,41 +288,103 @@ export function BonReceptionTable({
       count:
         label === "Tous"
           ? localBons.length
-          : localBons.filter((bon) => bon.statusLib === label).length,
+          : localBons.filter(
+              (bon) => bon.statusLib === label
+            ).length,
     }));
   }, [localBons]);
 
-  const totalPages = Math.max(
-    1,
-    Math.ceil(filteredBons.length / pageSize),
-  );
+  // ------------------------------------------------
+  // PAGINATION RÉUTILISABLE
+  // ------------------------------------------------
 
+  const {
+    currentPage,
+    pageSize,
+    totalPages,
+    totalItems,
+    paginatedData: paginatedBons,
+    setCurrentPage,
+    setPageSize,
+  } = usePagination(filteredBons, 10);
+
+  // Revenir à la première page lorsque les filtres changent
   useEffect(() => {
     setCurrentPage(1);
-  }, [dateRange, statusFilter, pageSize]);
+  }, [dateRange, statusFilter, setCurrentPage]);
 
-  useEffect(() => {
-    if (currentPage > totalPages) {
-      setCurrentPage(totalPages);
-    }
-  }, [currentPage, totalPages]);
-
-  const paginatedBons = useMemo(() => {
-    const startIndex = (currentPage - 1) * pageSize;
-
-    return filteredBons.slice(
-      startIndex,
-      startIndex + pageSize,
-    );
-  }, [filteredBons, currentPage, pageSize]);
+  // ------------------------------------------------
+  // HISTORIQUE DU COMPTE
+  // ------------------------------------------------
 
   const historyBons = useMemo(() => {
     if (historyCompteId === null) return [];
 
     return localBons.filter(
-      (bon) => bon.compteId === historyCompteId,
+      (bon) => bon.compteId === historyCompteId
     );
   }, [localBons, historyCompteId]);
+
+  // ------------------------------------------------
+  // EXPORT CSV
+  // ------------------------------------------------
+
+  const handleExport = () => {
+    exportCsv({
+      data: filteredBons,
+      filename: "bons-reception.csv",
+      columns: [
+        {
+          header: "Référence",
+          accessor: (bon) => bon.reference,
+        },
+        {
+          header: "Compte",
+          accessor: (bon) => bon.name,
+        },
+        {
+          header: "ID compte",
+          accessor: (bon) => bon.compteId,
+        },
+        {
+          header: "Quantité olives (kg)",
+          accessor: (bon) => bon.quantityOlive,
+        },
+        {
+          header: "Quantité huile (L)",
+          accessor: (bon) => bon.quantityOil,
+        },
+        {
+          header: "Prix/kg (DT)",
+          accessor: (bon) => bon.priceKg.toFixed(2),
+        },
+        {
+          header: "Prix total (DT)",
+          accessor: (bon) => bon.price.toFixed(2),
+        },
+        {
+          header: "Paiement (DT)",
+          accessor: (bon) => bon.payement.toFixed(2),
+        },
+        {
+          header: "Acompte (DT)",
+          accessor: (bon) => bon.acompte.toFixed(2),
+        },
+        {
+          header: "Statut",
+          accessor: (bon) => bon.statusLib,
+        },
+        {
+          header: "Date de création",
+          accessor: (bon) => bon.dateCreation,
+        },
+      ],
+    });
+  };
+
+  // ------------------------------------------------
+  // COLONNES AG GRID
+  // ------------------------------------------------
 
   const columnDefs = useMemo<ColDef<BonReception>[]>(
     () => [
@@ -367,6 +454,8 @@ export function BonReceptionTable({
         headerName: "Date création",
         minWidth: 130,
       },
+
+      // HISTORIQUE
       {
         colId: "history",
         headerName: "Historique",
@@ -375,25 +464,26 @@ export function BonReceptionTable({
         maxWidth: 105,
         sortable: false,
         filter: false,
-        cellRenderer: (params: ICellRendererParams<BonReception>) => {
+        cellRenderer: (
+          params: ICellRendererParams<BonReception>
+        ) => {
           if (!params.data) return null;
 
           return (
             <div className="flex h-full items-center justify-center">
-              <button
-                type="button"
-                title="Voir l'historique du compte"
+              <ActionIconButton
+                icon={<Eye className="size-[17px]" />}
+                label="Voir l'historique du compte"
                 onClick={() =>
                   setHistoryCompteId(params.data!.compteId)
                 }
-                className="flex size-9 items-center justify-center rounded-lg bg-[#eef4e6] text-[#556B2F] transition hover:bg-[#e1ebd6]"
-              >
-                <Eye className="size-[17px]" />
-              </button>
+              />
             </div>
           );
         },
       },
+
+      // MODIFIER
       {
         colId: "edit",
         headerName: "Modifier",
@@ -404,23 +494,24 @@ export function BonReceptionTable({
         sortable: false,
         filter: false,
         resizable: false,
-        cellRenderer: (params: ICellRendererParams<BonReception>) => {
+        cellRenderer: (
+          params: ICellRendererParams<BonReception>
+        ) => {
           if (!params.data) return null;
 
           return (
             <div className="flex h-full items-center justify-center">
-              <button
-                type="button"
-                title="Modifier"
+              <ActionIconButton
+                icon={<Pencil className="size-[17px]" />}
+                label="Modifier"
                 onClick={() => handleEdit(params.data!)}
-                className="flex size-9 items-center justify-center rounded-lg bg-[#eef4e6] text-[#556B2F] transition hover:bg-[#e1ebd6]"
-              >
-                <Pencil className="size-[17px]" />
-              </button>
+              />
             </div>
           );
         },
       },
+
+      // SUPPRIMER
       {
         colId: "delete",
         headerName: "Supprimer",
@@ -431,26 +522,30 @@ export function BonReceptionTable({
         sortable: false,
         filter: false,
         resizable: false,
-        cellRenderer: (params: ICellRendererParams<BonReception>) => {
+        cellRenderer: (
+          params: ICellRendererParams<BonReception>
+        ) => {
           if (!params.data) return null;
 
           return (
             <div className="flex h-full items-center justify-center">
-              <button
-                type="button"
-                title="Supprimer"
+              <ActionIconButton
+                icon={<Trash2 className="size-[17px]" />}
+                label="Supprimer"
+                variant="danger"
                 onClick={() => handleDelete(params.data!)}
-                className="flex size-9 items-center justify-center rounded-lg bg-[#fdebed] text-[#ef3340] transition hover:bg-[#fbdadd]"
-              >
-                <Trash2 className="size-[17px]" />
-              </button>
+              />
             </div>
           );
         },
       },
     ],
-    [onEdit, navigate],
+    [onEdit, navigate]
   );
+
+  // ------------------------------------------------
+  // CONFIGURATION AG GRID
+  // ------------------------------------------------
 
   const defaultColDef = useMemo<ColDef<BonReception>>(
     () => ({
@@ -463,12 +558,18 @@ export function BonReceptionTable({
         alignItems: "center",
       },
     }),
-    [],
+    []
   );
+
+  // ------------------------------------------------
+  // RENDU
+  // ------------------------------------------------
 
   return (
     <div className="w-full">
       <div className="overflow-hidden rounded-xl border border-[#e5e7eb] bg-white shadow-[0_2px_12px_rgba(15,23,42,0.04)]">
+
+        {/* FILTRE PAR DATE */}
         <DateRangeFilter
           value={dateRange}
           onChange={setDateRange}
@@ -476,12 +577,14 @@ export function BonReceptionTable({
           onExport={handleExport}
         />
 
+        {/* FILTRE PAR STATUT */}
         <StatusFilter
           items={statusCounts}
           value={statusFilter}
           onChange={setStatusFilter}
         />
 
+        {/* TABLEAU */}
         <div className="w-full px-4 pb-4">
           <DataTable<BonReception>
             rowData={paginatedBons}
@@ -490,25 +593,28 @@ export function BonReceptionTable({
             rowHeight={58}
             headerHeight={50}
             getRowId={({ data }) => data.id.toString()}
-            onGridReady={handleGridReady}
           />
 
+          {/* PAGINATION */}
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}
             pageSize={pageSize}
             onPageChange={setCurrentPage}
             onPageSizeChange={setPageSize}
+            totalItems={totalItems}
           />
         </div>
       </div>
 
+      {/* HISTORIQUE DU COMPTE */}
       <BonReceptionHistory
         open={historyCompteId !== null}
         bons={historyBons}
         onClose={() => setHistoryCompteId(null)}
       />
 
+      {/* CONFIRMATION DE SUPPRESSION */}
       <ConfirmDialog
         open={selectedBon !== null}
         title="Supprimer le bon de réception"
@@ -524,3 +630,5 @@ export function BonReceptionTable({
     </div>
   );
 }
+
+export default BonReceptionTable;
